@@ -16,14 +16,59 @@ impl Default for Present {
     }
 }
 
+fn ribbon(present: &Present) -> u32 {
+    let mut smallest_side = 0;
+    let mut smaller_side = 0;
+    let mut smaller_found = false;
+
+    if present.length <= present.width && present.length <= present.height {
+        smallest_side += present.length;
+    } else if present.width <= present.length && present.width <= present.height {
+        smallest_side += present.width;
+    } else {
+        smallest_side += present.height;
+    }
+
+    if smallest_side == present.length && !smaller_found {
+        if present.width <= present.height {
+            smaller_side += present.width;
+            smaller_found = true;
+        } else {
+            smaller_side += present.height;
+            smaller_found = true;
+        }
+    }
+    if smallest_side == present.width && !smaller_found {
+        if present.length <= present.height {
+            smaller_side += present.length;
+            smaller_found = true;
+        } else {
+            smaller_side += present.height;
+            smaller_found = true;
+        }
+    }
+    if smallest_side == present.height && !smaller_found {
+        if present.length <= present.width {
+            smaller_side += present.length;
+        } else {
+            smaller_side += present.width;
+        }
+    }
+
+    let ribbon_wrap = smaller_side + smaller_side + smallest_side + smallest_side;
+    let ribbon_bow = present.length * present.width * present.height;
+    return ribbon_wrap + ribbon_bow;
+}
+
 fn main() {
     let presents = match fs::read_to_string("presents.txt") {
         Ok(dimensions) => dimensions,
         Err(kind) => String::from(format!("{}", kind)),
     };
-    let mut total_count = 0;
     let mut present = Present::default();
+    let mut total_count = 0;
     let mut total_paper: u32 = 0;
+    let mut total_ribbon = 0;
     for dimensions in presents.split_whitespace() {
         let mut dimension_count: i8 = 1;
         let mut dimension_vec = Vec::new();
@@ -87,9 +132,9 @@ fn main() {
                 let side_c = present.height * present.length;
 
                 let mut small_side = 0;
-                if side_a < side_b && side_a < side_c {
+                if side_a <= side_b && side_a <= side_c {
                     small_side += side_a;
-                } else if side_b < side_a && side_b < side_c {
+                } else if side_b <= side_a && side_b <= side_c {
                     small_side += side_b;
                 } else {
                     small_side += side_c;
@@ -99,10 +144,9 @@ fn main() {
                 present_paper += ((2 * side_a) + (2 * side_b) + (2 * side_c)) + small_side;
 
                 total_paper += present_paper;
-                println!(
-                    "Individual: {} Total: {} LWH: {},{},{}",
-                    present_paper, total_paper, present.length, present.width, present.height
-                );
+
+                total_ribbon += ribbon(&present);
+
                 present = Present::default();
                 total_count += 1;
             }
@@ -113,5 +157,6 @@ fn main() {
         }
     }
     println!("The required amount of paper is: {}ft²", total_paper);
+    println!("The required amount of ribbon is: {}ft", total_ribbon);
     println!("Count: {}", total_count);
 }
