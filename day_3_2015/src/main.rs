@@ -1,9 +1,33 @@
 use colored::Colorize;
+use rand::Rng;
 use std::fs;
+use std::io;
 
 struct Position {
     x: isize,
     y: isize,
+}
+
+fn random_directions() {
+    let mut count = 0;
+    let mut directions = String::new();
+    while count != 10_000 {
+        count += 1;
+        let mut rng = rand::thread_rng();
+        let id = rng.gen_range(0..100);
+        match id {
+            0..=24 => directions.push_str("^"),
+            25..=49 => directions.push_str(">"),
+            50..=74 => directions.push_str("v"),
+            75..=100 => directions.push_str("<"),
+            _ => println!("Failed to generate directions."),
+        };
+    }
+
+    println!("Writing...");
+
+    fs::File::create("directions.txt").expect("File creation/truncation failure");
+    fs::write("directions.txt", directions).expect("File write failure");
 }
 
 fn print_2d(array: &Vec<Vec<u32>>, size: isize) -> () {
@@ -157,6 +181,23 @@ fn navigate(raw_size: usize, directions: &String) -> i32 {
 }
 
 fn main() {
+    println!("Would you like to generate a new set of directions? y/n");
+    loop {
+        let mut answer = String::new();
+        io::stdin()
+            .read_line(&mut answer)
+            .expect("Failed to read entry.");
+
+        match answer.trim() {
+            "y" => {
+                random_directions();
+                break;
+            }
+            "n" => break,
+            _ => println!("Invalid. Please enter y or n."),
+        }
+    }
+
     let directions = match fs::read_to_string("directions.txt") {
         Ok(steps) => steps,
         Err(e) => String::from(format!("{}", e)),
