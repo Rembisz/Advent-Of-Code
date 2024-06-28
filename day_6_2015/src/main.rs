@@ -1,4 +1,5 @@
 use std::{io, fs};
+use std::io::prelude::*;
 
 enum Action {
     Toggle,
@@ -53,7 +54,7 @@ fn main() {
         Err(e) => panic!("Invalid input file. (Error: {})", e), // Error handling
     };
 
-    let axis = vec![false; grid_size_x as usize];
+    let axis = vec![0; grid_size_x as usize];
     let mut plane = vec![axis; grid_size_y as usize]; // Create the 2d plane of lights (bools)
 
     let action_list = parse_actions(&instructions); // Create a list of each action performed in order using parse_actions
@@ -82,22 +83,56 @@ fn main() {
             }
         }
 
-        perform_action(x1 as usize, y1 as usize, x2 as usize, y2 as usize, &mut plane, &action_list[line_number]);
+        perform_action(false, x1 as usize, y1 as usize, x2 as usize, y2 as usize, &mut plane, &action_list[line_number]);
         // For each line, perform the respective action (from action_list) on the plane using perform_action
 
         line_number += 1; // Count each line number so as not to lose coordinate sync with action_list
     }
 
     let on = count_print_results(plane);
-    println!("\n\nThere are {} lights; {} of which are on, and {} off.", grid_size_x * grid_size_y, on, grid_size_x * grid_size_y - on); // Count and print results
+    println!("\n\nThere are {} lights; {} of which are on, and {} off.\n", grid_size_x * grid_size_y, on, grid_size_x * grid_size_y - on); // Count and print results
+    println!("Next up, variation two.\n");
+
+    pause(); // Pause program before variation two
+
+    let axis_2 = vec![0; grid_size_x as usize];
+    let mut plane_2 = vec![axis_2; grid_size_y as usize]; // Create the 2d plane of lights (bools)
+    let mut line_number = 0; // Reset our line number
+    for line in instructions.lines() {
+        let coordinates = parse_coordinates(&line); 
+        let x1 = coordinates[0];
+        let y1 = coordinates[1];// For each line, pull the coordinates using parse_coordinates
+        let x2 = coordinates[2];
+        let y2 = coordinates[3];
+
+        perform_action(true, x1 as usize, y1 as usize, x2 as usize, y2 as usize, &mut plane_2, &action_list[line_number]);
+        // For each line, perform the respective action (from action_list) on the plane using perform_action
+
+        line_number += 1; // Count each line number so as not to lose coordinate sync with action_list
+    }
+
+    let brightness = count_print_results_2(plane_2);
+    println!("\n\nTotal brightness is {}.", brightness);
 }
 
-fn count_print_results(plane: Vec<Vec<bool>>) -> i32 {
+fn count_print_results_2(plane: Vec<Vec<i32>>) -> i64{
+    let mut total: i64 = 0;
+    for column in 0..plane.len() {
+        println!("");
+        for row in 0..plane[0].len() { // Count every light's brightness and return that value
+            print!(" {} ", plane[column][row]); // Print row indices without skipping lines
+            total += plane[column][row] as i64;
+        }
+    }
+    total
+}
+
+fn count_print_results(plane: Vec<Vec<i32>>) -> i32 {
     let mut on = 0;
     for column in 0..plane.len() {
         println!("");
         for row in 0..plane[0].len() {
-            if plane[column][row] == true { // Count every light that is on and return that value
+            if plane[column][row] > 0 { // Count every light that is on and return that value
                 print!(" 1 "); // Print row indices that are on without skipping lines
                 on += 1;
             } else {
@@ -152,45 +187,81 @@ fn parse_actions(instructions: &String) -> Vec<Action> {
     actions
 }
 
-fn perform_action(x1: usize, y1: usize, x2: usize, y2: usize, plane: &mut Vec<Vec<bool>>, action: &Action) {
+fn perform_action(variation: bool, x1: usize, y1: usize, x2: usize, y2: usize, plane: &mut Vec<Vec<i32>>, action: &Action) {
     match action {
         Action::Toggle => {
             for column in x1..x2 + 1 { // Toggle every index in the given coordinates [(x1,y1), (x2,y2)]
                 for row in y1..y2 + 1 {
-                    toggle(&mut plane[column][row]);
+                    if variation {
+                        toggle_2(&mut plane[column][row]);
+                    } else {
+                        toggle(&mut plane[column][row]);
+                    }
                 }
             }
         }
         Action::On => {
             for column in x1..x2 + 1 { // Make every index in the given coordinates true [(x1,y1), (x2,y2)]
                 for row in y1..y2 + 1 {
-                    activate(&mut plane[column][row]);
+                    if variation {
+                        activate_2(&mut plane[column][row]);
+                    } else {
+                        activate(&mut plane[column][row]);
+                    }
                 }
             }
         }
         Action::Off => {
             for column in x1..x2 + 1 { // Make every index in the given coordinates false [(x1,y1), (x2,y2)]
                 for row in y1..y2 + 1 {
-                    deactivate(&mut plane[column][row]);
+                    if variation {
+                        deactivate_2(&mut plane[column][row]);
+                    } else {
+                        deactivate(&mut plane[column][row]);
+                    }
                 }
             }
         }
     }
 }
 
-fn toggle(switch: &mut bool) {
-    if !*switch {
+fn toggle(switch: &mut i32) {
+    if *switch == 0 {
         activate(switch);
     } else {
         deactivate(switch);
     }
 }
 
-fn activate(switch: &mut bool) {
-    *switch = true;
+fn activate(switch: &mut i32) {
+    *switch = 1;
 }
 
-fn deactivate(switch: &mut bool) {
-    *switch = false;
+fn deactivate(switch: &mut i32) {
+    *switch = 0;
+}
+
+fn toggle_2(switch: &mut i32) {
+    *switch += 2;
+}
+
+fn activate_2(switch: &mut i32) {
+    *switch += 1;
+}
+
+fn deactivate_2(switch: &mut i32) {
+    if *switch > 0 {
+        *switch -= 1;
+    }
+}
+
+fn pause() {
+    let mut stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    write!(stdout, "Press any key to continue...").unwrap();// Cursor will stay at the end of the line
+    stdout.flush().unwrap();
+
+    let _ = stdin.read(&mut [0u8]).unwrap(); // Read a single byte and ignore
 }
 
